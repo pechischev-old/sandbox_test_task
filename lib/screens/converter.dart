@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 
 class ConverterScreen extends StatelessWidget {
@@ -66,17 +67,11 @@ class _MoneyTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
-      keyboardType: const TextInputType.numberWithOptions(
-        signed: true,
-        decimal: true,
-      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        // TODO: will add a formatter for digits
+        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))
       ],
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: '0.0'
-      ),
+      decoration: InputDecoration(labelText: label, hintText: 'Input value like 0.00'),
     );
   }
 }

@@ -71,7 +71,12 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     _InitEvent event,
     Emitter<ConverterState> emitter,
   ) async {
-    final rate = _repository.getRate(_defaultCurrencyFrom, _defaultCurrencyTo);
+    Future.wait([
+      _repository.fetchCurrencies(),
+      _repository.fetchCurrencyRates(_defaultCurrencyFrom)
+    ]);
+
+    final rate = await _repository.getRate(_defaultCurrencyFrom, _defaultCurrencyTo);
     emitter(
       ConverterState.current(
         currencyFrom: _defaultCurrencyFrom,
@@ -108,9 +113,9 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (_, to, __, ___) {
+      current: (_, to, __, ___) async {
         final from = event.currency;
-        final rate = _repository.getRate(from, to);
+        final rate = await _repository.getRate(from, to);
         emitter(
           (state as _CurrentState).copyWith(currencyFrom: from, rate: rate),
         );
@@ -138,9 +143,9 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, __, ___, ____) {
+      current: (from, __, ___, ____) async {
         final to = event.currency;
-        final rate = _repository.getRate(from, to);
+        final rate = await _repository.getRate(from, to);
         emitter(
           (state as _CurrentState).copyWith(currencyTo: to, rate: rate),
         );
@@ -154,8 +159,8 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to, amount, _) {
-        final rate = _repository.getRate(to, from);
+      current: (from, to, amount, _) async {
+        final rate = await _repository.getRate(to, from);
         emitter(
           ConverterState.current(
             currencyFrom: to,

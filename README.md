@@ -1,16 +1,18 @@
-# sandbox_test_task
+# Currency exchange
 
-A new Flutter project.
+Тестовое задание в компанию Sandbox
 
-## Getting Started
+Суть приложения: конвертация суммы из одной валюты в другую
 
-This project is a starting point for a Flutter application.
+## Pre build
 
-A few resources to get you started if this is your first Flutter project:
+Команда для генерации схем в моделях
+`flutter packages pub run build_runner build`
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Ограничения
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- в качестве бекенда используется бесплатная версия АПИ exchangeratesapi.io, в ней доступна конвертация валюты только для EUR (на другие валюты выходит ошибка от бека)
+- нет показа пользовательских ошибок
+- нет строгой валидации значений
+- нет учета обработки различных состояний бекенда
+

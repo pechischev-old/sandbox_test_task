@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:sandbox_test_task/model/currency_rate.dart';
+import 'package:sandbox_test_task/repository/currency_repository.dart';
 import 'package:sandbox_test_task/state/converter_bloc.dart';
 
 class ConverterScreen extends StatelessWidget {
@@ -19,7 +19,12 @@ class ConverterScreen extends StatelessWidget {
           builder: (context, state) {
             return state.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              current: (from, to) => _ConverterForm(from: from, to: to),
+              current: (from, to, amount, rate) => _ConverterForm(
+                currencyFrom: from,
+                currencyTo: to,
+                amount: amount,
+                rate: rate,
+              ),
             );
           },
         ),
@@ -31,10 +36,16 @@ class ConverterScreen extends StatelessWidget {
 /// screen states
 
 class _ConverterForm extends StatelessWidget {
-  final CurrencyRate from;
-  final CurrencyRate to;
+  final String currencyFrom;
+  final String currencyTo;
+  final double amount;
+  final double rate;
 
-  const _ConverterForm({required this.from, required this.to});
+  const _ConverterForm(
+      {required this.currencyFrom,
+      required this.currencyTo,
+      required this.amount,
+      required this.rate});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +59,7 @@ class _ConverterForm extends StatelessWidget {
             Expanded(
               child: _MoneyTextField(
                 label: 'You send',
-                value: from.amount,
+                value: amount,
                 onChanged: (value) => context
                     .read<ConverterBloc>()
                     .add(ConverterEvent.setAmountFrom(amount: value)),
@@ -56,10 +67,12 @@ class _ConverterForm extends StatelessWidget {
             ),
             const Gap(20),
             _CurrencySelector(
-              currency: from.currency,
-              onChanged: (currency) => context
-                  .read<ConverterBloc>()
-                  .add(ConverterEvent.setCurrencyFrom(currency: currency)),
+              currency: currencyFrom,
+              onChanged: (currency) {
+                context
+                    .read<ConverterBloc>()
+                    .add(ConverterEvent.setCurrencyFrom(currency: currency));
+              },
             ),
           ],
         ),
@@ -76,7 +89,7 @@ class _ConverterForm extends StatelessWidget {
             Expanded(
               child: _MoneyTextField(
                 label: 'You get',
-                value: to.amount,
+                value: amount * rate,
                 onChanged: (value) => context
                     .read<ConverterBloc>()
                     .add(ConverterEvent.setAmountTo(amount: value)),
@@ -84,7 +97,7 @@ class _ConverterForm extends StatelessWidget {
             ),
             const Gap(20),
             _CurrencySelector(
-              currency: to.currency,
+              currency: currencyTo,
               onChanged: (currency) => context
                   .read<ConverterBloc>()
                   .add(ConverterEvent.setCurrencyTo(currency: currency)),
@@ -166,7 +179,7 @@ class _CurrencySelector extends StatelessWidget {
   }
 }
 
-class _CurrenciesDropdownList extends StatelessWidget {
+class _CurrenciesDropdownList extends StatefulWidget {
   final String selectedValue;
 
   const _CurrenciesDropdownList({
@@ -174,21 +187,60 @@ class _CurrenciesDropdownList extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // TODO: get list of currencies
+  State<_CurrenciesDropdownList> createState() =>
+      _CurrenciesDropdownListState();
+}
 
+class _CurrenciesDropdownListState extends State<_CurrenciesDropdownList> {
+  late final List<String> currenciesList;
+  late String selectedValue;
+
+  @override
+  void initState() {
+    super.initState();
+
+    currenciesList = context.read<CurrencyRepository>().getCurrencies();
+    selectedValue = widget.selectedValue;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Dialog(
-      child: ListView.separated(
-        itemBuilder: (_, index) => RadioListTile<String>(
-          value: 'false',
-          groupValue: selectedValue,
-          onChanged: (value) {
-            Navigator.pop(context);
-          },
-          title: const Text('Some text'),
-        ),
-        separatorBuilder: (_, __) => const Gap(10),
-        itemCount: 8,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView.separated(
+              itemBuilder: (_, index) {
+                final currency = currenciesList[index];
+                return RadioListTile<String>(
+                  value: currency,
+                  groupValue: selectedValue,
+                  onChanged: (value) {
+                    if (value != null) {
+                      selectedValue = value;
+                      setState(() {});
+                    }
+                  },
+                  title: Text(currency),
+                );
+              },
+              separatorBuilder: (_, __) => const Gap(10),
+              itemCount: currenciesList.length,
+            ),
+          ),
+          ButtonBar(
+            children: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context, selectedValue),
+              ),
+            ],
+          )
+        ],
       ),
     );
   }

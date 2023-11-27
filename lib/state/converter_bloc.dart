@@ -1,8 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:sandbox_test_task/model/currency_rate.dart';
+import 'package:sandbox_test_task/repository/currency_repository.dart';
 
 part 'converter_bloc.freezed.dart';
+
+const _defaultCurrencyFrom = 'EUR';
+const _defaultCurrencyTo = 'USD';
 
 @freezed
 class ConverterEvent with _$ConverterEvent {
@@ -39,13 +42,20 @@ class ConverterState with _$ConverterState {
 
   // TODO: rename state
   factory ConverterState.current({
-    required CurrencyRate from,
-    required CurrencyRate to,
+    required String currencyFrom,
+    required String currencyTo,
+    required double amount,
+    required double rate,
   }) = _CurrentState;
 }
 
 class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
-  ConverterBloc() : super(ConverterState.loading()) {
+  late final CurrencyRepository _repository;
+
+  ConverterBloc({
+    required CurrencyRepository repository,
+  })  : _repository = repository,
+        super(ConverterState.loading()) {
     on<_InitEvent>(_init);
     on<_UpdateCurrenciesEvent>(_updateCurrencies);
     on<_SetAmountFromEvent>(_setAmountFrom);
@@ -61,10 +71,13 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     _InitEvent event,
     Emitter<ConverterState> emitter,
   ) async {
+    final rate = _repository.getRate(_defaultCurrencyFrom, _defaultCurrencyTo);
     emitter(
       ConverterState.current(
-        from: const CurrencyRate(currency: 'EUR', amount: 1),
-        to: const CurrencyRate(currency: 'USD', amount: 1),
+        currencyFrom: _defaultCurrencyFrom,
+        currencyTo: _defaultCurrencyTo,
+        amount: 1,
+        rate: rate,
       ),
     );
   }
@@ -81,13 +94,9 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to) {
-        const rate = 1.5; // TODO: get actual rate for currency
+      current: (_, __, ___, ____) {
         emitter(
-          ConverterState.current(
-            from: from.copyWith(amount: event.amount),
-            to: to.copyWith(amount: event.amount * rate),
-          ),
+          (state as _CurrentState).copyWith(amount: event.amount),
         );
       },
       orElse: () {},
@@ -99,12 +108,11 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to) {
+      current: (_, to, __, ___) {
+        final from = event.currency;
+        final rate = _repository.getRate(from, to);
         emitter(
-          ConverterState.current(
-            from: from.copyWith(currency: event.currency),
-            to: to,
-          ),
+          (state as _CurrentState).copyWith(currencyFrom: from, rate: rate),
         );
       },
       orElse: () {},
@@ -116,13 +124,9 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to) {
-        const rate = 1.5; // TODO: get actual rate for currency
+      current: (_, __, ___, rate) {
         emitter(
-          ConverterState.current(
-            from: to.copyWith(amount: event.amount / rate),
-            to: to.copyWith(amount: event.amount),
-          ),
+          (state as _CurrentState).copyWith(amount: event.amount / rate),
         );
       },
       orElse: () {},
@@ -134,12 +138,11 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to) {
+      current: (from, __, ___, ____) {
+        final to = event.currency;
+        final rate = _repository.getRate(from, to);
         emitter(
-          ConverterState.current(
-            from: from,
-            to: to.copyWith(currency: event.currency),
-          ),
+          (state as _CurrentState).copyWith(currencyTo: to, rate: rate),
         );
       },
       orElse: () {},
@@ -151,11 +154,14 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to) {
+      current: (from, to, amount, _) {
+        final rate = _repository.getRate(to, from);
         emitter(
           ConverterState.current(
-            from: from.copyWith(currency: to.currency),
-            to: to.copyWith(currency: from.currency),
+            currencyFrom: to,
+            currencyTo: from,
+            rate: rate,
+            amount: amount,
           ),
         );
       },

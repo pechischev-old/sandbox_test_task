@@ -1,32 +1,42 @@
-// получить список всех названий валют (сохранить в бд)
-// получить список показателей для одной валюты - сохранить эти значения в бд ([currency]: { currencyTo, rate })
-// если инета нет, то вывожу сохраненное значение
-// если значения нет, то вывожу ошибку и ничего не меняю в модели
-
+import 'package:sandbox_test_task/provider/converter_provider.dart';
+import 'package:sandbox_test_task/provider/dtos/converter_dtos.dart';
 import 'package:sandbox_test_task/provider/exchange_provider.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 class CurrencyRepository {
   final _apiProvider = ExchangeApiProvider();
+  final _localProvider = ConverterLocalApi();
 
   late final List<String> _currencies;
 
-  List<String> getCurrencies() {
-    // get from db
-    return _currencies;
+  Future<List<String>> getCurrencies() async {
+    return _localProvider.getCurrencies();
   }
 
   Future<double> getRate(String currencyFrom, String currencyTo) async {
-    // get value
-    return 1.5;
+    final hasInternetConnection = await InternetConnectionChecker.createInstance().hasConnection;
+    if (hasInternetConnection) {
+      // если есть интернет, то запрашивает актуальные данные
+      await fetchCurrencyRates(currencyFrom);
+    }
+    final rates = await _localProvider.getCurrencyRates(currencyFrom);
+
+    try {
+      final currencyRate = rates.firstWhere((element) => element.currency == currencyTo);
+      return currencyRate.rate;
+    } catch (e) {
+      return 0;
+    }
   }
 
   Future<void> fetchCurrencyRates(String currencyFrom) async {
     final dto = await _apiProvider.getLatestRates(
-        currencyFrom: currencyFrom,
+      currencyFrom: currencyFrom,
     );
-    final rates = dto.rates;
-
-    // save to db
+    final rates = dto.rates.entries
+        .map((entry) => CurrencyRateDto(currency: entry.key, rate: entry.value))
+        .toList();
+    await _localProvider.saveCurrencyRates(currencyFrom, rates);
   }
 
   Future<void> fetchCurrencies() async {
@@ -36,6 +46,6 @@ class CurrencyRepository {
     } catch (e) {
       _currencies = [];
     }
-    // save to db
+    await _localProvider.saveCurrencies(_currencies);
   }
 }

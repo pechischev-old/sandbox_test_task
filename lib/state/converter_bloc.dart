@@ -13,8 +13,6 @@ class ConverterEvent with _$ConverterEvent {
 
   const factory ConverterEvent.init() = _InitEvent;
 
-  const factory ConverterEvent.updateCurrencies() = _UpdateCurrenciesEvent;
-
   const factory ConverterEvent.setAmountFrom({
     required double amount,
   }) = _SetAmountFromEvent;
@@ -57,7 +55,6 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
   })  : _repository = repository,
         super(ConverterState.loading()) {
     on<_InitEvent>(_init);
-    on<_UpdateCurrenciesEvent>(_updateCurrencies);
     on<_SetAmountFromEvent>(_setAmountFrom);
     on<_SetCurrencyFromEvent>(_setCurrencyFrom);
     on<_SetAmountToEvent>(_setAmountTo);
@@ -87,13 +84,6 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     );
   }
 
-  Future<void> _updateCurrencies(
-    _UpdateCurrenciesEvent event,
-    Emitter<ConverterState> emitter,
-  ) async {
-    // call repository method for getting actual currencies value
-  }
-
   Future<void> _setAmountFrom(
     _SetAmountFromEvent event,
     Emitter<ConverterState> emitter,
@@ -112,7 +102,7 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     _SetCurrencyFromEvent event,
     Emitter<ConverterState> emitter,
   ) async {
-    state.maybeWhen(
+    await state.maybeWhen(
       current: (_, to, __, ___) async {
         final from = event.currency;
         final rate = await _repository.getRate(from, to);
@@ -142,7 +132,7 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     _SetCurrencyToEvent event,
     Emitter<ConverterState> emitter,
   ) async {
-    state.maybeWhen(
+    await state.maybeWhen(
       current: (from, __, ___, ____) async {
         final to = event.currency;
         final rate = await _repository.getRate(from, to);
@@ -159,13 +149,12 @@ class ConverterBloc extends Bloc<ConverterEvent, ConverterState> {
     Emitter<ConverterState> emitter,
   ) async {
     state.maybeWhen(
-      current: (from, to, amount, _) async {
-        final rate = await _repository.getRate(to, from);
+      current: (from, to, amount, rate) {
         emitter(
           ConverterState.current(
             currencyFrom: to,
             currencyTo: from,
-            rate: rate,
+            rate: 1 / rate, // отражаем курс на противоположный
             amount: amount,
           ),
         );

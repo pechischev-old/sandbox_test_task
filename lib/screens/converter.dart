@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:sandbox_test_task/repository/currency_repository.dart';
 import 'package:sandbox_test_task/state/converter_bloc.dart';
+import 'package:sandbox_test_task/utils/formatters.dart';
 
 class ConverterScreen extends StatelessWidget {
   const ConverterScreen({super.key});
@@ -41,11 +41,12 @@ class _ConverterForm extends StatelessWidget {
   final double amount;
   final double rate;
 
-  const _ConverterForm(
-      {required this.currencyFrom,
-      required this.currencyTo,
-      required this.amount,
-      required this.rate});
+  const _ConverterForm({
+    required this.currencyFrom,
+    required this.currencyTo,
+    required this.amount,
+    required this.rate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +133,7 @@ class _MoneyTextField extends StatelessWidget {
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))
+        DecimalTextInputFormatter(decimalRange: 2),
       ],
       decoration: InputDecoration(
         labelText: label,
@@ -192,14 +193,12 @@ class _CurrenciesDropdownList extends StatefulWidget {
 }
 
 class _CurrenciesDropdownListState extends State<_CurrenciesDropdownList> {
-  late final List<String> currenciesList;
   late String selectedValue;
 
   @override
   void initState() {
     super.initState();
 
-    currenciesList = context.read<CurrencyRepository>().getCurrencies();
     selectedValue = widget.selectedValue;
   }
 
@@ -209,24 +208,30 @@ class _CurrenciesDropdownListState extends State<_CurrenciesDropdownList> {
       child: Column(
         children: [
           Expanded(
-            child: ListView.separated(
-              itemBuilder: (_, index) {
-                final currency = currenciesList[index];
-                return RadioListTile<String>(
-                  value: currency,
-                  groupValue: selectedValue,
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedValue = value;
-                      setState(() {});
-                    }
-                  },
-                  title: Text(currency),
-                );
-              },
-              separatorBuilder: (_, __) => const Gap(10),
-              itemCount: currenciesList.length,
-            ),
+            child: FutureBuilder(
+                future: context.read<CurrencyRepository>().getCurrencies(),
+                builder: (context, snapshot) {
+                  final currenciesList =
+                      snapshot.hasData ? snapshot.requireData : [];
+                  return ListView.separated(
+                    itemBuilder: (_, index) {
+                      final currency = currenciesList[index];
+                      return RadioListTile<String>(
+                        value: currency,
+                        groupValue: selectedValue,
+                        onChanged: (value) {
+                          if (value != null) {
+                            selectedValue = value;
+                            setState(() {});
+                          }
+                        },
+                        title: Text(currency),
+                      );
+                    },
+                    separatorBuilder: (_, __) => const Gap(10),
+                    itemCount: currenciesList.length,
+                  );
+                }),
           ),
           ButtonBar(
             children: [

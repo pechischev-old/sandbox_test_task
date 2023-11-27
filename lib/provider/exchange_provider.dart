@@ -9,7 +9,7 @@ import 'dtos/exchange_dtos.dart';
 part 'exchange_provider.g.dart';
 
 // TODO: get this value from .env
-const _accessKey = 'e26bdc95b62866ffa6d5e58f4abadeaf';
+const _accessKey = '4cf90756fdc39f272ca3bdaecba52830';
 
 @RestApi()
 abstract class ExchangeApiProvider {
